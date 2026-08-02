@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotify to YouTube Search
 // @namespace    https://github.com/NightMean/Spotify-To-Youtube-Search
-// @version      1.1.0
+// @version      1.1.1
 // @description  Attaches an always-visible YouTube search button directly to Spotify's + button, main action bar, top bar, and player bar.
 // @author       NightMean
 // @match        https://open.spotify.com/*
