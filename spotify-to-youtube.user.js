@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Spotify to YouTube Search
 // @namespace    https://github.com/NightMean/Spotify-To-Youtube-Search
-// @version      1.0.0
-// @description  Attaches an always-visible YouTube search button directly to Spotify's + button.
+// @version      1.1.0
+// @description  Attaches an always-visible YouTube search button directly to Spotify's + button, main action bar, top bar, and player bar.
 // @author       NightMean
 // @match        https://open.spotify.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
@@ -49,6 +49,44 @@
 
         .s2yt-btn:active {
             transform: scale(0.95);
+        }
+
+        /* Main Entity Action Bar Button */
+        .s2yt-btn-action-bar {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            margin: 0;
+            color: var(--text-subdued, #b3b3b3);
+            align-self: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .s2yt-btn-action-bar svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Top Navigation Bar Button */
+        .s2yt-btn-top-bar {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            margin: 0 4px;
+            color: var(--text-subdued, #b3b3b3);
+            align-self: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .s2yt-btn-top-bar svg {
+            width: 20px;
+            height: 20px;
         }
 
         /* Tracklist row + button wrapper: Always visible container for YouTube icon with zero layout shift */
@@ -152,6 +190,35 @@
         });
 
         return btn;
+    }
+
+    /**
+     * Extracts metadata (title and artist) for the main entity page (track, album, playlist, artist).
+     */
+    function getEntityPageMetadata() {
+        const main = document.querySelector('main') || document.querySelector('#main-view') || document.body;
+
+        const titleEl = main.querySelector('h1[data-testid="entityTitle"]') ||
+            main.querySelector('h1[dir="auto"]') ||
+            main.querySelector('h1') ||
+            main.querySelector('[data-testid="track-title"]');
+
+        const title = titleEl ? titleEl.textContent.trim() : '';
+
+        const headerContainer = (titleEl && titleEl.closest('[data-testid="entityHeader"], header, section, div')) || main;
+        const artistEls = headerContainer.querySelectorAll('[data-testid="creator-link"], [data-testid="entity-header-creator-name"] a, a[href*="/artist/"]');
+
+        let artist = '';
+        if (artistEls.length > 0) {
+            artist = Array.from(artistEls).map(el => el.textContent.trim()).filter(Boolean).join(', ');
+        } else {
+            const fallbackArtistEls = main.querySelectorAll('a[href*="/artist/"]');
+            if (fallbackArtistEls.length > 0) {
+                artist = Array.from(fallbackArtistEls).map(el => el.textContent.trim()).filter(Boolean).slice(0, 3).join(', ');
+            }
+        }
+
+        return { artist, title };
     }
 
     /**
@@ -274,12 +341,80 @@
     }
 
     /**
+     * 3. PROCESS MAIN ENTITY ACTION BAR (Track, Album, Playlist, Artist page main buttons row)
+     */
+    function processActionBar() {
+        const actionBarRow = document.querySelector('[data-testid="action-bar-row"]') ||
+            document.querySelector('[data-testid="action-bar"]');
+
+        if (!actionBarRow) return;
+
+        if (actionBarRow.querySelector('.s2yt-btn-action-bar')) return;
+
+        const btn = createYouTubeButton(getEntityPageMetadata, 's2yt-btn-action-bar');
+
+        const addBtn = actionBarRow.querySelector('[data-testid="add-button"]') ||
+            actionBarRow.querySelector('button[aria-label*="Save"]') ||
+            actionBarRow.querySelector('button[aria-label*="Uložiť"]') ||
+            actionBarRow.querySelector('button[aria-label*="Add"]') ||
+            actionBarRow.querySelector('button[aria-label*="Pridať"]');
+
+        const moreBtn = actionBarRow.querySelector('[data-testid="more-button"]') ||
+            actionBarRow.querySelector('button[aria-label*="More"]') ||
+            actionBarRow.querySelector('button[aria-label*="Viac"]');
+
+        const playBtn = actionBarRow.querySelector('[data-testid="play-button"]');
+
+        if (addBtn && addBtn.parentNode) {
+            addBtn.parentNode.insertBefore(btn, addBtn.nextSibling);
+        } else if (moreBtn && moreBtn.parentNode) {
+            moreBtn.parentNode.insertBefore(btn, moreBtn);
+        } else if (playBtn && playBtn.parentNode) {
+            playBtn.parentNode.insertBefore(btn, playBtn.nextSibling);
+        } else {
+            actionBarRow.appendChild(btn);
+        }
+    }
+
+    /**
+     * 4. PROCESS TOP NAVIGATION BAR (Sticky header when scrolling down)
+     */
+    function processTopBar() {
+        const topBarContent = document.querySelector('[data-testid="topbar-content"]') ||
+            document.querySelector('.topbar-content');
+
+        if (!topBarContent) return;
+
+        if (topBarContent.querySelector('.s2yt-btn-top-bar')) return;
+
+        const btn = createYouTubeButton(getEntityPageMetadata, 's2yt-btn-top-bar');
+
+        const addBtn = topBarContent.querySelector('[data-testid="add-button"]') ||
+            topBarContent.querySelector('button[aria-label*="Save"]') ||
+            topBarContent.querySelector('button[aria-label*="Uložiť"]') ||
+            topBarContent.querySelector('button[aria-label*="Add"]') ||
+            topBarContent.querySelector('button[aria-label*="Pridať"]');
+
+        const playBtn = topBarContent.querySelector('[data-testid="play-button"]');
+
+        if (addBtn && addBtn.parentNode) {
+            addBtn.parentNode.insertBefore(btn, addBtn.nextSibling);
+        } else if (playBtn && playBtn.parentNode) {
+            playBtn.parentNode.insertBefore(btn, playBtn.nextSibling);
+        } else {
+            topBarContent.appendChild(btn);
+        }
+    }
+
+    /**
      * Main scan function.
      */
     let scanTimeout = null;
     function scanSpotifyUI() {
         processNowPlayingBar();
         processTracklistRows();
+        processActionBar();
+        processTopBar();
     }
 
     function debouncedScan() {
