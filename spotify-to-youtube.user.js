@@ -341,9 +341,21 @@
     }
 
     /**
-     * 3. PROCESS MAIN ENTITY ACTION BAR (Track, Album, Playlist, Artist page main buttons row)
+     * Checks if current page is an Artist profile page.
+     */
+    function isArtistPage() {
+        return window.location.pathname.includes('/artist/');
+    }
+
+    /**
+     * 3. PROCESS MAIN ENTITY ACTION BAR (Track, Album, Playlist page main buttons row)
      */
     function processActionBar() {
+        if (isArtistPage()) {
+            document.querySelectorAll('.s2yt-btn-action-bar').forEach(el => el.remove());
+            return;
+        }
+
         const actionBarRow = document.querySelector('[data-testid="action-bar-row"]') ||
             document.querySelector('[data-testid="action-bar"]');
 
@@ -380,6 +392,11 @@
      * 4. PROCESS TOP NAVIGATION BAR (Sticky header when scrolling down)
      */
     function processTopBar() {
+        if (isArtistPage()) {
+            document.querySelectorAll('.s2yt-btn-top-bar').forEach(el => el.remove());
+            return;
+        }
+
         const topBarContent = document.querySelector('[data-testid="topbar-content"]') ||
             document.querySelector('.topbar-content');
 
